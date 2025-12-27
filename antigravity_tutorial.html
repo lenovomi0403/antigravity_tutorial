@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Antigravity 使用手冊</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;600&family=Noto+Sans+TC:wght@300;400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            /* User's Fixed Background */
+            --bg-color: #D1E6F7;
+            --text-color: #1d1d1d;
+
+            /* Refined Metro UI Palette (Vibrant & Flat) */
+            --tile-blue: #0050EF;
+            /* Cobalt */
+            --tile-green: #008A00;
+            /* Emerald */
+            --tile-purple: #6A00FF;
+            /* Indigo */
+            --tile-red: #EE1111;
+            /* Crimson */
+            --tile-orange: #FA6800;
+            /* Orange */
+            --tile-teal: #00ABA9;
+            /* Teal */
+            --tile-dark: #2D2D30;
+            /* Dark Gray */
+            --tile-gold: #FFC40D;
+            /* Amber */
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Back to Top Button */
+        #backToTop {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            background-color: var(--tile-blue);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transition: opacity 0.3s, transform 0.3s, background-color 0.3s;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1002;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #backToTop.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        #backToTop:hover {
+            transform: translateY(-5px);
+            background-color: #004C87;
+        }
+
+        /* Go Back History Button - Removed */
+
+
+
+        /* Header */
+        header {
+            padding: 40px 60px 20px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h1 {
+            font-weight: 300;
+            font-size: 3rem;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: #1a1a1a;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-top: 10px;
+            display: block;
+            color: #4a4a4a;
+        }
+
+        /* Container */
+        .container {
+            padding: 20px 60px;
+            flex-grow: 1;
+        }
+
+        /* Grid System */
+        .tile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            padding-bottom: 50px;
+        }
+
+        /* 3D Flip Tile Structure */
+        .tile-wrapper {
+            perspective: 1000px;
+            cursor: pointer;
+            height: 140px;
+            /* Standard Height */
+        }
+
+        .tile-wrapper.large {
+            grid-column: span 2;
+            grid-row: span 2;
+            height: 295px;
+        }
+
+        .tile-wrapper.wide {
+            grid-column: span 2;
+        }
+
+        .tile {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            transform-style: preserve-3d;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tile-wrapper:hover .tile {
+            transform: rotateX(180deg);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
+        }
+
+        .tile-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 15px;
+            box-sizing: border-box;
+            color: #fff;
+            text-align: left;
+        }
+
+        .tile-front {
+            /* Background color handled by utility classes */
+        }
+
+        .tile-back {
+            transform: rotateX(180deg);
+            /* Slightly darker shade for back or same color */
+            background-color: inherit;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Content Styling */
+        .tile-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .tile-label {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        /* Back face text */
+        .tile-desc {
+            font-size: 1.1rem;
+            /* Larger for readability on flip */
+            line-height: 1.4;
+            text-align: center;
+            padding: 10px;
+        }
+
+        /* Colors with Mist/Fog Effect (More Transparent Glassmorphism) */
+        .bg-blue {
+            background-color: rgba(0, 80, 239, 0.40);
+            background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .bg-green {
+            background-color: rgba(0, 138, 0, 0.40);
+            background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .bg-purple {
+            background-color: rgba(106, 0, 255, 0.40);
+            background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .bg-red {
+            background-color: rgba(238, 17, 17, 0.40);
+            background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .bg-orange {
+            background-color: rgba(250, 104, 0, 0.40);
+            background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .bg-teal {
+            background-color: rgba(0, 171, 169, 0.40);
+            background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .bg-dark {
+            background-color: rgba(45, 45, 48, 0.50);
+            background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.05);
+        }
+
+        .bg-gold {
+            background-color: rgba(255, 196, 13, 0.50);
+            background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: #333 !important;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.15);
+        }
+
+        /* Gold needs dark text */
+
+        /* Adjust Gold tile text for contrast if needed, mostly icons are fine */
+        .bg-gold .tile-face {
+            color: #222;
+        }
+
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .tile-wrapper {
+            animation: fadeInUp 0.6s ease-out backwards;
+        }
+
+        .tile-wrapper:nth-child(1) {
+            animation-delay: 0.1s;
+        }
+
+        .tile-wrapper:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .tile-wrapper:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .tile-wrapper:nth-child(4) {
+            animation-delay: 0.4s;
+        }
+
+        .tile-wrapper:nth-child(5) {
+            animation-delay: 0.5s;
+        }
+
+        .tile-wrapper:nth-child(6) {
+            animation-delay: 0.6s;
+        }
+
+        .tile-wrapper:nth-child(7) {
+            animation-delay: 0.7s;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            /* Lighter backdrop for transparency */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            color: #333;
+            width: 80%;
+            max-width: 800px;
+            height: 80%;
+            /* padding and overflow removed for sticky buttons */
+            display: flex;
+            flex-direction: column;
+            transform: scale(0.95);
+            transition: transform 0.3s;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #modal-container {
+            padding: 40px;
+            overflow-y: auto;
+            flex: 1;
+            /* scroll-behavior: smooth; REMOVED to ensure instant reset on open */
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            color: #333;
+            z-index: 1005;
+        }
+
+        .modal-header {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            border-bottom: 4px solid var(--tile-blue);
+            padding-bottom: 10px;
+        }
+
+        .modal-body p {
+            line-height: 1.6;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .modal-body code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            font-family: 'Consolas', monospace;
+            color: #c7254e;
+            word-break: break-all;
+        }
+
+        .modal-body ul {
+            padding-left: 20px;
+        }
+
+        .modal-body li {
+            margin-bottom: 10px;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            header {
+                padding: 30px 20px 10px;
+            }
+
+            .container {
+                padding: 20px 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .tile-grid {
+                grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
+            }
+
+            .modal-content {
+                width: 95%;
+                height: 90%;
+            }
+
+            .modal-header {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="particle-canvas"></canvas>
+
+    <header>
+        <h1>
+            <img src="https://antigravity.google/assets/image/antigravity-logo.png" alt="Antigravity Logo"
+                style="height: 50px; width: auto;">
+            Antigravity <span
+                style="font-size: 1rem; border: 1px solid var(--text-color); padding: 2px 6px; border-radius: 3px; font-weight: 500;">BETA</span>
+        </h1>
+        <span class="subtitle">您的全能型 AI 協作開發環境 (IDE) 官方指南</span>
+    </header>
+
+    <div class="container">
+        <div class="tile-grid">
+            <!-- 1. Intro (Large) - [Fixed] -->
+            <div class="tile-wrapper large" onclick="openModal('intro')">
+                <div class="tile bg-blue">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">🚀</div>
+                        <div class="tile-label">快速開始</div>
+                    </div>
+                    <div class="tile-face tile-back bg-blue">
+                        <div class="tile-desc">什麼是 Antigravity？<br>如何開始您的第一個專案？</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Schema Prompts (Wide) -->
+            <div class="tile-wrapper wide" onclick="openModal('schema')">
+                <div class="tile bg-gold">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">📋</div>
+                        <div class="tile-label">架構提示詞 (Schema)</div>
+                    </div>
+                    <div class="tile-face tile-back bg-gold">
+                        <div class="tile-desc">專案啟動必備！<br>填入資訊，效率提升 100%</div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- 3. Conversation Mode (New) -->
+            <div class="tile-wrapper" onclick="openModal('conversation')">
+                <div class="tile bg-green">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">💬</div>
+                        <div class="tile-label">對話模式</div>
+                    </div>
+                    <div class="tile-face tile-back bg-green">
+                        <div class="tile-desc">Auto / Chat / Edit<br>選擇最適合的溝通方式</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Model (New) -->
+            <div class="tile-wrapper" onclick="openModal('model')">
+                <div class="tile bg-purple">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">🧠</div>
+                        <div class="tile-label">AI 模型</div>
+                    </div>
+                    <div class="tile-face tile-back bg-purple">
+                        <div class="tile-desc">Gemini 1.5 Pro<br>長文本 Context 優勢</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. Installation -->
+            <div class="tile-wrapper" onclick="openModal('installation')">
+                <div class="tile bg-teal">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">⬇️</div>
+                        <div class="tile-label">安裝指南</div>
+                    </div>
+                    <div class="tile-face tile-back bg-teal">
+                        <div class="tile-desc">下載、安裝與<br>Google 登入修復</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. Core Features (Wide) -->
+            <div class="tile-wrapper wide" onclick="openModal('features')">
+                <div class="tile bg-orange">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">�️</div>
+                        <div class="tile-label">核心功能</div>
+                    </div>
+                    <div class="tile-face tile-back bg-orange">
+                        <div class="tile-desc">代碼編輯、終端機<br>瀏覽器預覽</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7. Workflow -->
+            <div class="tile-wrapper" onclick="openModal('workflow')">
+                <div class="tile bg-blue">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">🔄</div>
+                        <div class="tile-label">工作流程</div>
+                    </div>
+                    <div class="tile-face tile-back bg-blue">
+                        <div class="tile-desc">標準化的協作模式</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 8. UI Design -->
+            <div class="tile-wrapper" onclick="openModal('design')">
+                <div class="tile bg-teal">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">🎨</div>
+                        <div class="tile-label">UI 設計準則</div>
+                    </div>
+                    <div class="tile-face tile-back bg-teal">
+                        <div class="tile-desc">打造高質感介面</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 9. Shortcuts -->
+            <div class="tile-wrapper" onclick="openModal('shortcuts')">
+                <div class="tile bg-red">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">⌨️</div>
+                        <div class="tile-label">快捷操作</div>
+                    </div>
+                    <div class="tile-face tile-back bg-red">
+                        <div class="tile-desc">常用指令與關鍵字</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 10. Tips -->
+            <div class="tile-wrapper" onclick="openModal('tips')">
+                <div class="tile bg-blue">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">💡</div>
+                        <div class="tile-label">實用技巧</div>
+                    </div>
+                    <div class="tile-face tile-back bg-blue">
+                        <div class="tile-desc">開發小撇步</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 11. Token Usage -->
+            <div class="tile-wrapper" onclick="openModal('tokens')">
+                <div class="tile bg-purple">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">🪙</div>
+                        <div class="tile-label">Token 次數說明</div>
+                    </div>
+                    <div class="tile-face tile-back bg-purple">
+                        <div class="tile-desc">了解使用額度<br>與重置規則</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 12. FAQ (Wide) -->
+            <div class="tile-wrapper wide" onclick="openModal('faq')">
+                <div class="tile bg-dark">
+                    <div class="tile-face tile-front">
+                        <div class="tile-icon">❓</div>
+                        <div class="tile-label">常見問題 (FAQ)</div>
+                    </div>
+                    <div class="tile-face tile-back bg-dark">
+                        <div class="tile-desc">遇到問題了？<br>這裡有解答</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal Content Data -->
+    <div id="content-data" style="display: none;">
+        <div id="data-intro">
+
+            <div class="modal-header" style="border-color: var(--tile-blue)">快速開始</div>
+            <div class="modal-body">
+                <p><strong>歡迎來到 Antigravity！</strong></p>
+                <p>Antigravity 是 Google Deepmind 開發的下一代 AI 協作開發環境。它不只是一個聊天機器人，更是一個全能的工程師夥伴。</p>
+                <h3>如何開始？</h3>
+                <ol>
+                    <li><strong>定義任務</strong>：直接告訴我你想做什麼，例如「建立一個 React 的待辦事項清單」或「幫我 debug 這個 python script」。</li>
+                    <li><strong>互動協作</strong>：我會閱讀你的代碼庫，並提出修改建議。你可以拒絕、接受或要求修改。</li>
+                    <li><strong>執行與測試</strong>：我可以幫你運行終端機命令 (`npm start`, `python app.py`) 並透過內建瀏覽器預覽結果。</li>
+                </ol>
+            </div>
+        </div>
+
+
+
+        <div id="data-installation">
+
+            <div class="modal-header" style="border-color: var(--tile-teal)">安裝指南</div>
+            <div class="modal-body">
+                <h3>1. 下載與安裝</h3>
+                <ul>
+                    <li><strong>Windows/Mac</strong>: 前往 <a href="https://antigravity.google/download"
+                            target="_blank">antigravity.google/download</a> 下載安裝檔並執行。</li>
+                    <li><strong>Linux (Ubuntu)</strong>:
+                        <code>sudo apt update && sudo apt install antigravity</code>
+                    </li>
+                </ul>
+
+                <h3>2. 首次設定</h3>
+                <p>啟動後，您可以選擇匯入 VS Code 設定，並登入 Google 帳號以啟用 AI 功能。</p>
+
+                <div style="background: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin-top: 20px;">
+                    <strong
+                        style="color: #856404; font-size: 1.1rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span>🛠️ Google Antigravity (IDE) 無法登入解決方案彙整</span>
+                        <button
+                            onclick="this.closest('.modal-body').querySelector('.fix-guide-image').scrollIntoView({behavior: 'smooth'})"
+                            style="background: #fff; border: 1px solid #856404; color: #856404; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                            看圖 🖼️
+                        </button>
+                    </strong>
+                    <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">來源參考： GitHub Gist by XargsUK
+                        <a href="https://gist.github.com/XargsUK/0652586402b39d5b7eac98fe4ffacdf6" target="_blank"
+                            style="color: #005A9E; text-decoration: underline; margin-left: 5px;">連結</a>
+                        <br>問題描述： 點擊 "Sign in with Google" 按鈕後瀏覽器無反應，無法進行登入。
+                    </p>
+
+                    <h4 style="margin-top: 15px; margin-bottom: 8px;">步驟 1：前置作業 (獲取 Port 號)</h4>
+                    <p style="font-size: 0.9rem;">無論使用哪種修復方法，都必須先取得 IDE 目前的除錯 Port。</p>
+                    <ol style="font-size: 0.9rem; padding-left: 20px;">
+                        <li>開啟終端機 (Terminal) 或 PowerShell。</li>
+                        <li>進入 Antigravity 安裝目錄：
+                            <div style="position: relative;">
+                                <pre
+                                    style="background: #f0f0f0; padding: 5px; margin: 5px 0;">cd "C:\Users\&lt;username&gt;\AppData\Local\Programs\Antigravity"</pre>
+                                <button onclick="copyToClipboard(this)"
+                                    style="position: absolute; right: 5px; top: 5px; background: #fff; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; padding: 2px 8px; font-size: 0.8rem;">Copy</button>
+                            </div>
+                            <span style="font-size: 0.8rem; color: #888;"># 請將 &lt;username&gt; 替換為您的電腦使用者名稱</span>
+                        </li>
+                        <li>以除錯模式啟動程式：
+                            <div style="position: relative;">
+                                <pre
+                                    style="background: #f0f0f0; padding: 5px; margin: 5px 0;">.\Antigravity.exe --inspect=9229</pre>
+                                <button onclick="copyToClipboard(this)"
+                                    style="position: absolute; right: 5px; top: 5px; background: #fff; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; padding: 2px 8px; font-size: 0.8rem;">Copy</button>
+                            </div>
+                        </li>
+                        <li>程式啟動後，點擊介面上的 "Sign in with Google"。</li>
+                        <li>回到終端機，查看 Log 並記下 Port 號碼（每次點擊都會變）：
+                            <code style="color: #c7254e;">[Auth] Localhost server listening on port 11819</code>
+                        </li>
+                    </ol>
+
+                    <h4 style="margin-top: 15px; margin-bottom: 8px;">步驟 2：執行修復 (選擇一種方法)</h4>
+
+                    <p><strong>✅ 方法 A：PowerShell 單行指令 (最快、推薦)</strong></p>
+                    <p style="font-size: 0.9rem;">此方法已修正變數斷行問題，可直接執行。開啟一個新的 PowerShell 視窗，複製以下整行指令並貼上執行：</p>
+                    <div style="position: relative;">
+                        <pre
+                            style="background: #2d2d2d; color: #f8f8f2; padding: 10px; overflow-x: auto; border-radius: 4px; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all;">
+$p = Read-Host "請輸入 Port 號碼"; Start-Process "https://accounts.google.com/o/oauth2/v2/auth?client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A$p%2Foauth-callback&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcclog%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fexperimentsandconfigs&access_type=offline&prompt=consent&state=try_manual_login"</pre>
+                        <button onclick="copyToClipboard(this)"
+                            style="position: absolute; right: 5px; top: 5px; background: #444; color: #fff; border: 1px solid #666; border-radius: 3px; cursor: pointer; padding: 2px 8px; font-size: 0.8rem;">Copy</button>
+                    </div>
+                    <p style="font-size: 0.9rem; margin-top: 5px;">輸入剛剛記下的 Port 數字 (例如 11819) 並按
+                        Enter。瀏覽器將自動開啟登入畫面，完成登入即可。</p>
+
+                    <p style="margin-top: 15px;"><strong>📝 方法 B：手動修改網址 (如果不使用 PowerShell)</strong></p>
+                    <p style="font-size: 0.9rem;">若指令無法運作，請手動複製並修改網址。複製下方網址到記事本：</p>
+                    <div style="position: relative;">
+                        <pre
+                            style="background: #f0f0f0; padding: 10px; overflow-x: auto; border-radius: 4px; font-size: 0.8rem; white-space: pre-wrap; word-break: break-all; color: #555;">
+https://accounts.google.com/o/oauth2/v2/auth?client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A【請填入Port】%2Foauth-callback&response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcclog%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fexperimentsandconfigs&access_type=offline&prompt=consent&state=manual_fix</pre>
+                        <button onclick="copyToClipboard(this)"
+                            style="position: absolute; right: 5px; top: 5px; background: #fff; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; padding: 2px 8px; font-size: 0.8rem;">Copy</button>
+                    </div>
+                    <p style="font-size: 0.9rem; margin-top: 5px;">將 <span
+                            style="background:#ffeb3b; padding:0 2px;">【請填入Port】</span> 替換為您的數字 (例如 11819)，然後貼入 Chrome
+                        瀏覽器開啟。</p>
+
+                    <h4 style="margin-top: 20px; margin-bottom: 8px; color: #d9534f;">⚠️ 其他特殊案例排錯</h4>
+                    <p style="font-size: 0.9rem;">如果上述方法無效，請檢查是否符合以下情境：</p>
+                    <ul style="font-size: 0.9rem;">
+                        <li><strong>1. 公司網路/防毒軟體阻擋 (憑證錯誤)</strong> <br>
+                            若遇到 <code>SELF_SIGNED_CERT_IN_CHAIN</code> 錯誤，通常是因為 Kaspersky 等防毒軟體攔截 HTTPS。<br>
+                            <strong>解法：</strong> 開啟
+                            <code>C:\Users\&lt;User&gt;\AppData\Local\Programs\Antigravity\resources\app\node_modules\gaxios\build\cjs\src\gaxios.js</code>，找到
+                            <code>const https_1 = require("https");</code>，在下方加入
+                            <code>process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";</code>，存檔並重啟 IDE。
+                        </li>
+                        <li style="margin-top: 10px;"><strong>2. Linux (Ubuntu) 使用者</strong> <br>
+                            <strong>解法：</strong> 進入 <code>.../Antigravity/resources/app/out</code>，開啟
+                            <code>main.js</code>，搜尋方法 <code>G()</code> (需先格式化程式碼)，在 <code>return</code> 前加入
+                            <code>console.log</code> 印出 Auth URI，執行程式並從 Terminal 複製連結。
+                        </li>
+                    </ul>
+
+                    <div style="margin-top: 20px; text-align: center;">
+                        <img class="fix-guide-image" src="https://i.imgur.com/zNNBOhB.png" alt="Fix Guide Image"
+                            style="max-width: 100%; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="data-features">
+
+            <div class="modal-header" style="border-color: var(--tile-green)">核心功能</div>
+            <div class="modal-body">
+                <h3>1. 全權限文件編輯</h3>
+                <p>我可以創建新文件、或對現有文件進行大規模重構。無論是修改一行代碼還是重寫整個模組，我都能處理。</p>
+                <h3>2. 終端機控制 (Terminal)</h3>
+                <p>我可以執行 PowerShell 或 Bash 指令。安裝套件 (`npm install`)、運行伺服器 (`npm run dev`) 或執行測試都難不倒我。</p>
+                <h3>3. 視覺化預覽</h3>
+                <p>當你開發網頁應用時，我可以啟動瀏覽器代理 (Agent) 來查看實際渲染出的頁面，並根據視覺反饋進行 CSS 調整。</p>
+                <h3>4. 圖像生成</h3>
+                <p>需要 placeholder 圖片或 UI mockup 嗎？我可以使用內建工具為你生成圖像。</p>
+            </div>
+        </div>
+
+        <div id="data-workflow">
+
+            <div class="modal-header" style="border-color: var(--tile-purple)">工作流程</div>
+            <div class="modal-body">
+                <p>建立高效的 AI 協作模式：</p>
+                <ul>
+                    <li><strong>Step 1: 規劃</strong> - 在開始寫代碼前，我們可以先討論架構或建立 `TODO.md`。</li>
+                    <li><strong>Step 2: 實作</strong> - 我會逐步實作功能，建議每次專注於一個小模組。</li>
+                    <li><strong>Step 3: 驗證</strong> - 我會運行代碼並觀察輸出。如果有錯誤，我會自動分析 Traceback 並修復。</li>
+                    <li><strong>Step 4: 迭代</strong> - 根據你的反饋優化代碼風格或功能細節。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="data-shortcuts">
+
+            <div class="modal-header" style="border-color: var(--tile-orange)">快捷操作</div>
+            <div class="modal-body">
+                <p>雖然我是透過自然語言溝通，但這些關鍵字很有用：</p>
+                <ul>
+                    <li><code>/turbo</code> - 在工作流中標註此行，允許我自動執行命令無須等待批准。</li>
+                    <li><code>@File</code> - 確保我在 Context 中注意到特定文件。</li>
+                    <li><strong>明確的路徑</strong> - 告訴我「在 components 資料夾下創建 Header.vue」比「創建 Header」更精確。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="data-design">
+
+            <div class="modal-header" style="border-color: var(--tile-teal)">UI 設計準則</div>
+            <div class="modal-body">
+                <p>Antigravity 擅長創造美觀的介面。當你要求我設計網頁時，我會遵循：</p>
+                <ul>
+                    <li><strong>Rich Aesthetics</strong>：使用深色模式、玻璃擬態 (Glassmorphism) 和流暢動畫。</li>
+                    <li><strong>現代排版</strong>：使用 Inter, Roboto 等現代字體，避免預設 Times New Roman。</li>
+                    <li><strong>響應式設計</strong>：確保在手機和桌面都有完美體驗。</li>
+                    <li><strong>拒絕平庸</strong>：如果你覺得設計太簡單，請隨時要求「讓它看起來更高級 (Premium)」。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="data-tips">
+
+            <div class="modal-header" style="border-color: var(--tile-red)">實用技巧</div>
+            <div class="modal-body">
+                <ul>
+                    <li><strong>保持對話</strong>：如果我卡住了，或者你需要澄清，直接像對同事說話一樣跟我溝通。</li>
+                    <li><strong>Context 是關鍵</strong>：如果你有特定的錯誤訊息，複製貼上給我看。</li>
+                    <li><strong>一次一事</strong>：雖然我可以處理複雜任務，但將大任務拆解成小步驟（例如：這輪先做 HTML，下一輪做 CSS）通常效果更好。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="data-faq">
+
+            <div class="modal-header" style="border-color: var(--tile-dark)">常見問題</div>
+            <div class="modal-body">
+                <p><strong>Q: 你能讀取我電腦裡所有的文件嗎？</strong><br>
+                    A: 不行。我只能存取你指定的工作區 (Workspace) 內的資料。</p>
+
+                <p><strong>Q: 運行的指令安全嗎？</strong><br>
+                    A: 我提出的所有指令在執行前都需要你的批准（除非你使用了 Turbo 模式）。這確保了安全性。</p>
+
+                <p><strong>Q: 我可以要求你使用特定的 Library 嗎？</strong><br>
+                    A: 當然！如果你想用 TailwindCSS, React, Vue 或 PyTorch，請直接指定。</p>
+            </div>
+        </div>
+
+
+
+        <div id="data-schema">
+
+            <div class="modal-header" style="border-color: var(--tile-gold)">架構提示詞 (Project Schema)</div>
+            <div class="modal-body" style="padding: 0;">
+                <p>為了讓 AI 更精準地執行您的任務，在啟動新專案時，建議一次性提供以下結構化資訊。您可以直接複製下方模板並填寫：</p>
+                <div
+                    style="background: #f5f5f5; border: 1px solid #ddd; padding: 15px; border-radius: 5px; color: #333; font-family: monospace; white-space: pre-wrap;">
+                    **[專案名稱 / 簡述]**
+                    > 備註：一句話精準描述專案目標與用途。
+                    > 舉例：一個個人的記帳網頁應用 App，專注於手機版體驗。
+                    回答：
+
+                    **0. 專案類型 (Project Type):**
+                    > 備註：決定網站架構是傳統分頁還是單頁應用。
+                    - 類型選擇：
+                    > 舉例：多頁式網站 (Multi-page)、單頁應用 (SPA)、一頁式行銷頁 (Landing Page)
+
+                    **1. 技術棧 (Tech Stack):**
+                    > 備註：請明確指定框架與工具，若無偏好可填寫「AI 推薦」。
+                    - 前端框架：
+                    > 舉例：Vanilla JS, React, Vue, Next.js
+                    - CSS 方案：
+                    > 舉例：Vanilla CSS, TailwindCSS, SCSS
+                    - 後端/資料庫 (若需要)：
+                    > 舉例：Python Flask, SQLite, Firebase
+
+                    **2. 設計風格 (Design Aesthetic):**
+                    > 備註：確立視覺基調，這決定了使用者的第一印象。
+                    - 主色調：
+                    > 舉例：深色模式 (Dark Mode)、海洋藍配白色、暖橘色系
+                    - 風格關鍵字：
+                    > 舉例：Metro UI, Glassmorphism (玻璃擬態), Minimalist (極簡), Cyberpunk
+                    - 字體偏好：
+                    > 舉例：Inter, Noto Sans TC (繁體中文), Roboto
+
+                    **3. 核心功能 (Core Features):**
+                    > 備註：列出最重要的 3-5 個 MVP 功能，請描述具體行為。
+                    - 功能 A：
+                    > 舉例：用戶註冊與登入 (支援 Google OAuth)
+                    - 功能 B：
+                    > 舉例：新增記帳項目 (包含輸入金額、選擇類別、日期與備註)
+                    - 功能 C：
+                    > 舉例：數據圖表統計 (顯示當月總支出圓餅圖)
+
+                    **4. 頁面結構與細節 (Sitemap & Page Items):**
+                    > 備註：列出頁面並詳述該頁面需要哪些「輸入欄位」或「顯示項目」，這能加速與資料庫對接。
+                    - 首頁 (Home)
+                    > 舉例：Hero Banner (大標題+按鈕), 最新消息列表
+                    - 登入頁 (Login)
+                    > 舉例：Email 輸入框, 密碼輸入框, 登入按鈕 (需對應 User 資料表)
+                    - 記帳頁 (Add Transaction)
+                    > 舉例：金額欄位 (Number), 類別下拉選單 (Dropdown), 日期選擇器, 備註欄位
+
+                    **5. 資料欄位規劃 (Data Fields) [選填]:**
+                    > 備註：定義資料結構，幫助生成正確的 Mock Data。
+                    - User:
+                    > 舉例：{ id, username, email, password_hash, avatar_url }
+                    - Transaction:
+                    > 舉例：{ id, amount, category, date, note, type }
+                </div>
+                <p><strong>💡 為什麼這很重要？</strong><br>
+                    提供清晰的「架構提示詞」可以減少來回確認的需求，讓我能一次性生成符合您期望的專案骨架與設計風格。</p>
+            </div>
+        </div>
+
+        <div id="data-tokens">
+            <div class="modal-header" style="border-color: var(--tile-purple)">Token 次數說明</div>
+            <div class="modal-body">
+                <h3>🪙 關於 Antigravity Token 額度</h3>
+                <p>Antigravity 是一個強大的 AI 開發環境，為了確保服務品質與資源公平分配，我們設有每日 Token 使用額度限制。</p>
+
+                <h4 style="margin-top: 20px;">📊 額度如何計算？</h4>
+                <ul>
+                    <li><strong>消耗計算：</strong> 每次您發送請求（Prompt）以及 AI 生成的回覆（Response）都會消耗 Token。</li>
+                    <li><strong>代碼讀取：</strong> 當 AI 需要讀取您的專案檔案（Context）時，這些檔案的內容也會計入 Input Token。</li>
+                </ul>
+
+                <h4 style="margin-top: 20px;">🔄 重置規則</h4>
+                <ul>
+                    <li><strong>重置時間：</strong> 額度通常會在每 24 小時重置一次（具體時間依您的時區或帳戶設定而定）。</li>
+                    <li><strong>免費 vs 付費：</strong> 目前 Beta 期間主要提供免費試用額度，未來可能會推出更高額度的付費方案。</li>
+                </ul>
+
+                <h4 style="margin-top: 20px;">💡 節省 Token 小技巧</h4>
+                <ol>
+                    <li><strong>精確的上下文 (@File)：</strong> 只將與當前任務「最相關」的檔案加入 Context，避免讓 AI 一次讀取整個專案。</li>
+                    <li><strong>明確的指令：</strong> 提供清晰、具體的指令（如使用我們的架構提示詞），減少 AI 來回猜測與修錯的次數。</li>
+                    <li><strong>善用 /turbo：</strong> 在確認指令無誤時使用 Turbo 模式，雖然不直接省 Token，但能提高單次交互的效率。</li>
+                </ol>
+
+                <div style="background: #e1f5fe; border-left: 5px solid #03a9f4; padding: 15px; margin-top: 20px;">
+                    <strong>注意：</strong> 如果您遇到 "Rate Limit Exceeded" 或 "Quota Exhausted" 錯誤，請稍待重置時間或檢查是否有異常的大量請求。
+                </div>
+            </div>
+        </div>
+
+        <div id="data-conversation">
+            <div class="modal-header" style="border-color: var(--tile-green)">對話模式 (Conversation Mode)</div>
+            <div class="modal-body">
+                <p>Antigravity 是一個「Agent-First」的開發平台，您可以透過側邊欄選擇適合目前任務的運作模式：</p>
+
+                <h3>1. Fast Mode (快速模式)</h3>
+                <p>⚡ <strong>適合：簡單、明確的指令</strong></p>
+                <ul>
+                    <li>Agent 會直接執行任務，不進行繁瑣的計畫確認。</li>
+                    <li>適用於快速修復 Bug、回答程式碼問題或小型功能實作。</li>
+                </ul>
+
+                <h3>2. Planning Mode (規劃模式)</h3>
+                <p>📋 <strong>適合：複雜功能、大型重構</strong></p>
+                <ul>
+                    <li>Agent 會先產一份 <strong>Implementation Plan (實作計畫)</strong> 與 <strong>Task List (任務清單)</strong>。
+                    </li>
+                    <li>您必須審核並批准這些計畫後，Agent 才會開始執行。這讓您能掌控開發方向。</li>
+                </ul>
+
+                <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+
+                <h3>📦 Artifacts (產出物協作)</h3>
+                <p>Antigravity 不只是聊天，它會透過 <strong>Artifacts</strong> 與您溝通：</p>
+                <ul>
+                    <li><strong>計畫書與清單：</strong> 讓您檢視它的思考邏輯。</li>
+                    <li><strong>瀏覽器錄影與截圖：</strong> 驗證它在瀏覽器中的操作結果。</li>
+                    <li><strong>非同步回饋：</strong> 您可以在 Artifacts 上像 Google Docs 一樣留言 (Comment)，Agent 會即使修正而無需中斷流程。</li>
+                </ul>
+
+                <!-- Legacy content removed -->
+                <!-- End of new conversation content -->
+            </div>
+        </div>
+
+        <div id="data-model">
+            <div class="modal-header" style="border-color: var(--tile-purple)">AI 模型架構 (Model Stack)</div>
+            <div class="modal-body">
+                <p>Antigravity 並非單一模型，而是由多個專業 AI 協同運作的「混合模型系統」。</p>
+
+                <h3>1. Core Reasoning Model (核心推理)</h3>
+                <p>這是您主要對話的「大腦」，此模型具有「黏著性 (Sticky)」，選定後會持續負責該次會話。您可以選擇：</p>
+                <ul>
+                    <li><strong>Gemini 3 Pro (High/Low)</strong>：Google 最強大的推理模型。</li>
+                    <li><strong>Gemini 3 Flash</strong>：速度與效能的平衡選擇。</li>
+                    <li><strong>Claude Sonnet 4.5 / Opus 4.5</strong>：Anthropic 的頂尖模型。</li>
+                    <li><strong>GPT-OSS</strong>：開源模型的選擇。</li>
+                </ul>
+
+                <h3>2. Specialized Models (專用模型)</h3>
+                <p>系統後端會自動調用針對特定任務優化的模型 (不可自訂)：</p>
+                <ul>
+                    <li><strong>Nano Banana Pro</strong>：專職生成圖片 (Image Generation)，如 UI Mockup 或系統架構圖。</li>
+                    <li><strong>Gemini 2.5 Pro UI Checkpoint</strong>：專門驅動 <strong>Browser Agent</strong>，負責點擊、滾動與網頁操作。
+                    </li>
+                    <li><strong>Gemini 2.5 Flash (Lite)</strong>：負責背景任務，如 Codebase 語意搜尋與 Context 摘要。</li>
+                </ul>
+
+                <!-- End of new model content -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+            <div id="modal-container">
+                <!-- Data will be injected here -->
+            </div>
+            <!-- Back to Top Button (Now inside Modal) -->
+            <button id="backToTop" title="回到頂部">↑</button>
+        </div>
+    </div>
+
+
+
+    <script>
+        // Back to Top Logic
+        const backToTopBtn = document.getElementById('backToTop');
+        // Point to the inner scrollable container
+        const modalContent = document.getElementById('modal-container');
+
+        // Only track modal scrolling
+        modalContent.addEventListener('scroll', () => {
+            if (modalContent.scrollTop > 300) {
+                backToTopBtn.classList.add('visible');
+            } else {
+                backToTopBtn.classList.remove('visible');
+            }
+        });
+
+        backToTopBtn.addEventListener('click', () => {
+            modalContent.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Go History Back Logic (Legacy support function)
+        function goHistoryBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                alert("已執行指令，但目前瀏覽器沒有上一頁紀錄 (No previous page)。");
+            }
+        }
+
+        function openModal(id) {
+            const content = document.getElementById('data-' + id).innerHTML;
+            const container = document.getElementById('modal-container');
+            container.innerHTML = content;
+            document.getElementById('modalOverlay').classList.add('active');
+
+            // Reset Modal Scroll Instantly (No Animation)
+            modalContent.scrollTo({ top: 0, behavior: 'instant' });
+            backToTopBtn.classList.remove('visible'); // Hide initially
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+            // Clear content on close to ensure fresh state next time
+            setTimeout(() => {
+                document.getElementById('modal-container').innerHTML = '';
+            }, 300); // Wait for fade out transition
+        }
+
+        // Add keyboard support for closing modal
+        document.addEventListener('keydown', function (event) {
+            if (event.key === "Escape") {
+                closeModal();
+            }
+        });
+
+        function copyToClipboard(button) {
+            // Find the pre element preceeding the button
+            const pre = button.previousElementSibling;
+            if (!pre) return;
+
+            const textToCopy = pre.innerText;
+
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = button.innerText;
+                button.innerText = 'Copied!';
+                setTimeout(() => {
+                    button.innerText = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                button.innerText = 'Error';
+            });
+        }
+
+        /* --- Interactive Particle Effect (Mimicking antigravity.google) --- */
+        (function () {
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let particles = [];
+
+            // Mouse interaction
+            let mouseX = 0;
+            let mouseY = 0;
+            let targetX = 0;
+            let targetY = 0;
+
+            document.addEventListener('mousemove', (e) => {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+            });
+
+            function resize() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+                initParticles();
+            }
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.size = Math.random() * 3 + 1; // Size 1-4
+                    this.speedX = Math.random() * 1 - 0.5; // Drift speed
+                    this.speedY = Math.random() * 1 - 0.5;
+                    this.color = this.getRandomColor();
+                    this.type = Math.random() > 0.8 ? 'dash' : 'dot'; // 20% dashes
+                    this.dashLen = Math.random() * 15 + 5;
+                }
+
+                getRandomColor() {
+                    const colors = [
+                        'rgba(66, 133, 244, 0.6)',  // Google Blue
+                        'rgba(0, 171, 169, 0.6)',   // Teal
+                        'rgba(0, 80, 239, 0.6)',    // Cobalt
+                        'rgba(160, 160, 160, 0.4)'  // Grey
+                    ];
+                    return colors[Math.floor(Math.random() * colors.length)];
+                }
+
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+
+                    // Mouse interaction (Parallax/Repulsion mix)
+                    const dx = mouseX - width / 2;
+                    const dy = mouseY - height / 2;
+                    this.x += (dx * 0.01 * this.speedX); // Subtle parallax
+                    this.y += (dy * 0.01 * this.speedY);
+
+                    // Wrap around screen
+                    if (this.x > width) this.x = 0;
+                    if (this.x < 0) this.x = width;
+                    if (this.y > height) this.y = 0;
+                    if (this.y < 0) this.y = height;
+                }
+
+                draw() {
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    if (this.type === 'dot') {
+                        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    } else {
+                        // Draw dash (pill shape)
+                        ctx.roundRect(this.x, this.y, this.dashLen, this.size, 2);
+                    }
+                    ctx.fill();
+                }
+            }
+
+            function initParticles() {
+                particles = [];
+                const count = Math.floor((width * height) / 15000); // Density
+                for (let i = 0; i < count; i++) {
+                    particles.push(new Particle());
+                }
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+                particles.forEach(p => {
+                    p.update();
+                    p.draw();
+                });
+                requestAnimationFrame(animate);
+            }
+
+            window.addEventListener('resize', resize);
+            resize();
+            animate();
+        })();
+    </script>
+</body>
+
+</html>
